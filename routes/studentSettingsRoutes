@@ -1,0 +1,48 @@
+const express = require('express');
+const router  = express.Router();
+const { protect } = require('../middleware/auth');
+const {
+  getProfile,
+  updateProfile,
+  changePassword,
+  getNotificationSettings,
+  updateNotificationSettings,
+  getAccountStats,
+  deleteAccount,
+  getSettings,           // ← add
+  updateAllSettings,     // ← add
+  updatePreferences,     // ← add
+  resetSettings,         // ← add
+} = require('../controllers/studentSettingsController');
+
+// All routes require authentication
+router.use(protect);
+
+// Profile
+router.get('/profile',         getProfile);
+router.put('/profile',         updateProfile);
+
+// Password
+router.put('/change-password', changePassword);
+
+// Notification & preference settings
+router.get('/notifications',            getNotificationSettings);
+router.put('/notifications',            updateNotificationSettings);
+router.put('/settings/notifications',   updateNotificationSettings);  // ← add this
+router.put('/settings/preferences',     updatePreferences);            // ← add this if missing
+
+// ✅ Settings routes — these were missing
+router.get('/settings',              getSettings);
+router.put('/settings',              updateAllSettings);
+router.put('/settings/reset',        resetSettings);
+router.put('/settings/preferences',  updatePreferences);
+
+
+
+// Account stats
+router.get('/stats', getAccountStats);
+
+// Delete account
+router.delete('/delete-account', deleteAccount);
+
+module.exports = router;
