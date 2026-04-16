@@ -15,6 +15,7 @@ const driverSettingsRoutes  = require('./routes/driverSettingsRoutes');
 const studentSettingsRoutes = require('./routes/studentSettingsRoutes');
 const broadcastRoutes = require('./routes/broadcastRoutes');
 const adminSettingsRoutes = require('./routes/adminSettingsRoutes');
+const withdrawalRoutes      = require('./routes/withdrawalRoutes');
 
 
 
@@ -72,6 +73,9 @@ app.use('/api/driver/settings', driverSettingsRoutes);
 app.use('/api/student', studentSettingsRoutes);
 app.use('/api/broadcast', broadcastRoutes);
 app.use('/api/admin', adminSettingsRoutes);
+
+// Withdrawals
+app.use('/api/withdrawals', withdrawalRoutes);
 
 // ✅ Driver CRUD — GET /api/drivers returns all drivers for admin
 // This is the route your AdminDashboard was hitting and getting 404

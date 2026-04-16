@@ -142,6 +142,14 @@ const driverSchema = new mongoose.Schema(
         insurance:   { type: Boolean, default: true }
       }
     },
+    // Add to driverSchema in models/Driver.js
+    earnings: {
+      total: { type: Number, default: 0 },
+      available: { type: Number, default: 0 },
+      pending: { type: Number, default: 0 },
+      withdrawn: { type: Number, default: 0 },
+      lastPayout: Date
+    },
 
     // ── Additional Driver Fields ────────────────────────────────────────────
     preferredRoutes: {
@@ -222,7 +230,7 @@ driverSchema.pre('save', async function (next) {
     this.password = await bcrypt.hash(this.password, salt);
     next();  // ✅ hashing done, continue
   } catch (err) {
-    next(err);  // ✅ was empty before — this was the bug!
+      // ✅ was empty before — this was the bug!
   }
 });
 
