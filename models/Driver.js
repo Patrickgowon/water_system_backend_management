@@ -221,17 +221,10 @@ driverSchema.virtual('displayName').get(function () {
 
 // ── Pre-save: hash password ──────────────────────────────────────────────────
 // ── Pre-save: hash password ──────────────────────────────────────────────────
-driverSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
-    return next();  // ✅ password unchanged, continue
-  }
-  try {
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();  // ✅ hashing done, continue
-  } catch (err) {
-      // ✅ was empty before — this was the bug!
-  }
+driverSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
+  const salt = await bcrypt.genSalt(12);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 

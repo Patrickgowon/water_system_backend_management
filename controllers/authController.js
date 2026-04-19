@@ -3,17 +3,17 @@ const jwt    = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User   = require('../models/users');
 const { sendOTPEmail } = require('../utils/emailService');
+const Driver = require('../models/Driver'); 
 
 
-
-const signToken = (userId) => {
-  console.log('🔐 Generating token for user ID:', userId);
+const signToken = (userId, role) => {
+  console.log('🔐 Generating token for user ID:', userId, '| Role:', role);
   const jwtSecret = process.env.JWT_SECRET || 'mysecret123';
   if (!process.env.JWT_SECRET) {
     console.warn('⚠️ WARNING: JWT_SECRET not set in environment variables. Using default for development.');
   }
   const token = jwt.sign(
-    { id: userId },
+    { id: userId, role },
     jwtSecret,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
@@ -305,19 +305,29 @@ exports.resendOTP = async (req, res) => {
   }
 };
 
+// add this at the top
+
 exports.login = async (req, res) => {
   try {
     console.log('📥 Login attempt:', req.body?.email);
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
     }
 
-    // Find user with password field
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
-    console.log('👤 User found:', user ? 'YES' : 'NO');
-    
+    let user = null;
+    let isDriver = false;
+
+    // 1️⃣ Check User model first (admin + student)
+    user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+
+    // 2️⃣ If not found in User, check Driver model
+    if (!user) {
+      user = await Driver.findOne({ email: email.toLowerCase() }).select('+password');
+      if (user) isDriver = true;
+    }
+
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
@@ -326,15 +336,23 @@ exports.login = async (req, res) => {
     const isMatch = typeof user.comparePassword === 'function'
       ? await user.comparePassword(password)
       : await bcrypt.compare(password, user.password);
-    
-    console.log('🔑 Password match:', isMatch ? 'YES' : 'NO');
-    
+
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
-    // Check if account is active
-    if (user.isActive === false) {
+    // Check if driver account is active (drivers use 'status' field)
+    if (isDriver && user.status !== 'active') {
+      return res.status(403).json({ 
+        success: false, 
+        message: user.status === 'pending' 
+          ? 'Your driver account is pending admin approval.' 
+          : 'Driver account is inactive. Contact admin.' 
+      });
+    }
+
+    // Check if regular user is active
+    if (!isDriver && user.isActive === false) {
       return res.status(403).json({ success: false, message: 'Account is deactivated. Contact support.' });
     }
 
@@ -342,14 +360,58 @@ exports.login = async (req, res) => {
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
 
-    console.log('✅ Login successful:', user.email);
-    console.log('👤 User role:', user.role);
-    console.log('🔐 JWT_SECRET status:', process.env.JWT_SECRET ? 'Set in environment' : 'Using default');
-    
-    sendTokenResponse(res, 200, user, 'Login successful');
+    console.log('✅ Login successful:', user.email, '| Role:', user.role);
+
+    // Build response data
+    const userData = {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+      role: isDriver ? 'driver' : user.role,
+      isVerified: user.isVerified,
+      // Driver specific
+      ...(isDriver && {
+        tankerId: user.tankerId,
+        vehicleType: user.vehicleType,
+        licenseNumber: user.licenseNumber,
+        status: user.status,
+        rating: user.rating,
+        totalDeliveries: user.totalDeliveries,
+      }),
+      // Student specific
+      ...(!isDriver && user.role === 'student' && {
+        matricNumber: user.matricNumber,
+        department: user.department,
+        level: user.level,
+        hall: user.hall,
+        roomNumber: user.roomNumber,
+        balance: user.balance,
+        totalOrders: user.totalOrders,
+      }),
+    };
+
+    const token = signToken(user._id, isDriver ? 'driver' : user.role);
+
+    const cookieOptions = {
+      httpOnly: true,
+      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
+    };
+
+    res.cookie('token', token, cookieOptions);
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      token,
+      data: userData
+    });
+
   } catch (err) {
     console.error('❌ LOGIN ERROR:', err.name, '-', err.message);
-    console.error(err.stack);
     res.status(500).json({ success: false, message: err.message });
   }
 };
