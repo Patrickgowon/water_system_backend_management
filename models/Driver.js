@@ -87,6 +87,9 @@ const driverSchema = new mongoose.Schema(
       select:   false,
     },
 
+    verificationToken:       { type: String, select: false },
+    verificationTokenExpiry: { type: Date,   select: false },
+
     // ── Operational / Admin fields ──────────────────────────────────────────
     role:         { type: String, default: 'driver' },
     status: {
@@ -151,6 +154,10 @@ const driverSchema = new mongoose.Schema(
       lastPayout: Date
     },
 
+    currentLat: { type: Number, default: null },
+    currentLng: { type: Number, default: null },
+    lastSeen:   { type: Date,   default: null },
+
     // ── Additional Driver Fields ────────────────────────────────────────────
     preferredRoutes: {
       type: [String],
@@ -208,6 +215,7 @@ incidentsCount: { type: Number, default: 0 }
   },
   
 );
+
 
 // ── Virtual: full name ───────────────────────────────────────────────────────
 driverSchema.virtual('fullName').get(function () {

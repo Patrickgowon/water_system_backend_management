@@ -2,6 +2,10 @@
 const Driver = require('../models/Driver');
 const jwt    = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const { sendOTPEmail } = require('../utils/emailService');
+
+// ── Generate 6-digit OTP ─────────────────────────────────────────────────────
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -39,6 +43,11 @@ const sanitizeDriver = (driver) => {
 //  @desc    Register a new driver
 //  @access  Public
 // ════════════════════════════════════════════════════════════
+
+
+// ════════════════════════════════════════════════════════════
+//  @route   POST /api/auth/driver/register
+// ════════════════════════════════════════════════════════════
 exports.registerDriver = async (req, res) => {
   try {
     const {
@@ -49,7 +58,7 @@ exports.registerDriver = async (req, res) => {
       password, confirmPassword,
     } = req.body;
 
-    // ── 1. Basic presence check ─────────────────────────────────────────────
+    // ── 1. Basic presence check ─────────────────────────────
     const required = {
       firstName, lastName, email, phone, dateOfBirth, address,
       tankerId, vehicleType, vehiclePlate, vehicleCapacity, vehicleYear,
@@ -69,7 +78,7 @@ exports.registerDriver = async (req, res) => {
       });
     }
 
-    // ── 2. Password confirmation ────────────────────────────────────────────
+    // ── 2. Password confirmation ────────────────────────────
     if (password !== confirmPassword) {
       return res.status(400).json({
         success: false,
@@ -86,7 +95,7 @@ exports.registerDriver = async (req, res) => {
       });
     }
 
-    // ── 3. Duplicate checks ─────────────────────────────────────────────────
+    // ── 3. Duplicate checks ─────────────────────────────────
     const [emailExists, tankerExists, licenseExists] = await Promise.all([
       Driver.findOne({ email:         email.toLowerCase() }),
       Driver.findOne({ tankerId:      tankerId.toUpperCase() }),
@@ -115,7 +124,7 @@ exports.registerDriver = async (req, res) => {
       });
     }
 
-    // ── 4. License expiry must be in the future ─────────────────────────────
+    // ── 4. License expiry must be in the future ─────────────
     if (new Date(licenseExpiry) <= new Date()) {
       return res.status(400).json({
         success: false,
@@ -124,7 +133,11 @@ exports.registerDriver = async (req, res) => {
       });
     }
 
-    // ── 5. Create driver (password hashed by pre-save hook) ─────────────────
+    // ── 5. Generate OTP ─────────────────────────────────────
+    const otp       = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // ── 6. Create driver ────────────────────────────────────
     const driver = await Driver.create({
       firstName:        firstName.trim(),
       lastName:         lastName.trim(),
@@ -143,27 +156,38 @@ exports.registerDriver = async (req, res) => {
       emergencyContact: emergencyContact.trim(),
       emergencyPhone,
       password,
-      status:           'pending',   // admin must approve
+      status:           'pending',
       isVerified:       false,
+      verificationToken:       otp,
+      verificationTokenExpiry: otpExpiry,
     });
+
+    // ── 7. Send OTP email ────────────────────────────────────
+    try {
+      await sendOTPEmail({ email: driver.email, firstName: driver.firstName, otp });
+    } catch (emailErr) {
+      console.error('OTP email failed:', emailErr.message);
+      await Driver.findByIdAndDelete(driver._id);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email. Please check your email address and try again.',
+      });
+    }
 
     return res.status(201).json({
       success: true,
-      message:
-        'Driver registration successful! Your account is under review. ' +
-        'You will be notified via email once approved (24–48 hours).',
-      data: sanitizeDriver(driver),
+      message: 'Registration successful! Please check your email for the OTP verification code.',
+      data: { email: driver.email, firstName: driver.firstName },
     });
+
   } catch (err) {
     console.error('❌ registerDriver error:', err);
 
-    // Mongoose validation errors
     if (err.name === 'ValidationError') {
       const errors = Object.values(err.errors).map((e) => e.message);
       return res.status(400).json({ success: false, message: errors[0], errors });
     }
 
-    // Duplicate key (race condition safety net)
     if (err.code === 11000) {
       const field = Object.keys(err.keyValue)[0];
       return res.status(409).json({
@@ -178,6 +202,100 @@ exports.registerDriver = async (req, res) => {
       message: 'Server error. Please try again later.',
       errors:  [err.message],
     });
+  }
+};
+
+// ════════════════════════════════════════════════════════════
+//  @route   POST /api/auth/driver/verify-otp
+//  @desc    Verify driver OTP after registration
+//  @access  Public
+// ════════════════════════════════════════════════════════════
+exports.verifyDriverOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and OTP are required',
+      });
+    }
+
+    const driver = await Driver.findOne({
+      email:                   email.toLowerCase(),
+      verificationToken:       otp,
+      verificationTokenExpiry: { $gt: Date.now() },
+    });
+
+    if (!driver) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP. Please request a new one.',
+      });
+    }
+
+    // Mark as verified
+    driver.isVerified              = true;
+    driver.verificationToken       = undefined;
+    driver.verificationTokenExpiry = undefined;
+    await driver.save({ validateBeforeSave: false });
+
+    console.log('✅ Driver email verified:', driver.email);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Email verified successfully! Your account is now under admin review. You will be notified once approved (24–48 hours).',
+      data: { email: driver.email, firstName: driver.firstName },
+    });
+
+  } catch (err) {
+    console.error('❌ verifyDriverOTP error:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ════════════════════════════════════════════════════════════
+//  @route   POST /api/auth/driver/resend-otp
+//  @desc    Resend OTP to driver email
+//  @access  Public
+// ════════════════════════════════════════════════════════════
+exports.resendDriverOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const driver = await Driver.findOne({
+      email:      email.toLowerCase(),
+      isVerified: false,
+    });
+
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: 'No pending verification found for this email',
+      });
+    }
+
+    const otp       = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+
+    driver.verificationToken       = otp;
+    driver.verificationTokenExpiry = otpExpiry;
+    await driver.save({ validateBeforeSave: false });
+
+    await sendOTPEmail({ email: driver.email, firstName: driver.firstName, otp });
+
+    return res.status(200).json({
+      success: true,
+      message: 'New OTP sent to your email.',
+    });
+
+  } catch (err) {
+    console.error('❌ resendDriverOTP error:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 

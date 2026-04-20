@@ -16,6 +16,13 @@ const {
   resendOTP
 } = require('../controllers/authController');
 
+const {
+  registerDriver,
+  loginDriver,
+  verifyDriverOTP,
+  resendDriverOTP,
+} = require('../controllers/driverController');
+
 const { protect, authorize } = require('../middleware/auth');
 
 // ─── Public Routes ────────────────────────────────────────────────────────────
@@ -24,6 +31,9 @@ router.post('/login', login);
 router.get('/verify-email/:token', verifyEmail);
 router.post('/forgot-password', forgotPassword);
 router.patch('/reset-password/:token', resetPassword);
+
+router.post('/driver/verify-otp',  verifyDriverOTP);
+router.post('/driver/resend-otp',  resendDriverOTP);
 
 // ─── Check if admin exists ────────────────────────────────────────────────────
 router.get('/check-admin', async (req, res) => {
