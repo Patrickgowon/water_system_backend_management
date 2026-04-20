@@ -50,7 +50,6 @@ exports.updateRequestStatus = async (req, res) => {
     const oldDriverId = request.driver ? request.driver.toString() : null;
     const newDriverId = driver          ? driver.toString()         : null;
 
-    // Update basic fields
     if (status)        request.status        = status;
     if (estimatedTime) request.estimatedTime = estimatedTime;
 
@@ -64,7 +63,7 @@ exports.updateRequestStatus = async (req, res) => {
         request.driverName = `${driverDoc.firstName} ${driverDoc.lastName}`;
         request.tanker     = driverDoc.tankerId;
 
-        // ✅ Push in-app notification to driver
+        // In-app notification → Driver
         try {
           await Driver.findByIdAndUpdate(driver, {
             $push: {
@@ -72,7 +71,7 @@ exports.updateRequestStatus = async (req, res) => {
                 $each: [{
                   type:      'delivery',
                   title:     '🚚 New Delivery Assigned',
-                  message:   `You have been assigned a delivery for ${new Date(request.deliveryDate).toLocaleDateString()} at ${request.preferredTime}. Check your schedule.`,
+                  message:   `You have been assigned a delivery for ${new Date(request.deliveryDate).toLocaleDateString()} at ${request.preferredTime}.`,
                   read:      false,
                   createdAt: new Date(),
                 }],
@@ -83,13 +82,34 @@ exports.updateRequestStatus = async (req, res) => {
           });
           console.log(`✅ In-app notification sent to driver: ${driverDoc.firstName}`);
         } catch (notifErr) {
-          console.error('Notification error:', notifErr.message);
+          console.error('Driver notification error:', notifErr.message);
         }
 
-        // ✅ Send email to driver
+        // In-app notification → Student (driver assigned)
+        try {
+          await User.findByIdAndUpdate(request.user, {
+            $push: {
+              inAppNotifications: {
+                $each: [{
+                  type:      'info',
+                  title:     '🚚 Driver Assigned',
+                  message:   `Driver ${driverDoc.firstName} ${driverDoc.lastName} (Tanker: ${driverDoc.tankerId}) has been assigned to your delivery on ${new Date(request.deliveryDate).toLocaleDateString()} at ${request.preferredTime}.`,
+                  read:      false,
+                  createdAt: new Date(),
+                }],
+                $position: 0,
+                $slice:    50,
+              }
+            }
+          });
+          console.log(`✅ Driver assignment notification sent to student`);
+        } catch (notifErr) {
+          console.error('Student driver notification error:', notifErr.message);
+        }
+
+        // Email → Driver
         try {
           const studentDoc = await User.findById(request.user).select('firstName lastName hall roomNumber');
-          console.log('📧 Sending email to driver:', driverDoc.email);
           await sendDriverAssignmentEmail({
             driverEmail:   driverDoc.email,
             driverName:    `${driverDoc.firstName} ${driverDoc.lastName}`,
@@ -109,8 +129,39 @@ exports.updateRequestStatus = async (req, res) => {
       request.tanker = tanker;
     }
 
-    // ✅ Send email to student when approved
+    // ─── Approval notification → Student ──────────────────────────────────
     if (status === 'approved' || status === 'assigned') {
+      // In-app notification
+      try {
+        const driverDoc = request.driver
+          ? await Driver.findById(request.driver).select('firstName lastName tankerId')
+          : null;
+
+        const notifMessage = driverDoc
+          ? `Your request has been approved and assigned to driver ${driverDoc.firstName} ${driverDoc.lastName} (${driverDoc.tankerId}).`
+          : `Your water request has been approved. A driver will be assigned shortly.`;
+
+        await User.findByIdAndUpdate(request.user, {
+          $push: {
+            inAppNotifications: {
+              $each: [{
+                type:      'success',
+                title:     '✅ Request Approved',
+                message:   notifMessage,
+                read:      false,
+                createdAt: new Date(),
+              }],
+              $position: 0,
+              $slice:    50,
+            }
+          }
+        });
+        console.log(`✅ Approval notification sent to student`);
+      } catch (notifErr) {
+        console.error('❌ Student approval notification error:', notifErr.message);
+      }
+
+      // Email → Student
       try {
         const studentDoc = await User.findById(request.user).select('firstName lastName email');
         const driverDoc  = request.driver
@@ -118,7 +169,6 @@ exports.updateRequestStatus = async (req, res) => {
           : null;
 
         if (studentDoc?.email) {
-          console.log('📧 Sending email to student:', studentDoc.email);
           await sendOrderApprovedEmail({
             studentEmail:  studentDoc.email,
             studentName:   `${studentDoc.firstName} ${studentDoc.lastName}`,
@@ -136,8 +186,6 @@ exports.updateRequestStatus = async (req, res) => {
     }
 
     await request.save();
-
-    console.log(`✅ Request ${id} updated successfully`);
 
     const updatedRequest = await WaterRequest.findById(id)
       .populate('user',   'firstName lastName email')
