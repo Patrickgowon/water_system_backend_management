@@ -40,6 +40,7 @@ const io = new Server(server, {
   }
 });
 
+
 // Make io accessible in routes/controllers
 app.set('io', io);
 
@@ -124,7 +125,9 @@ const corsOptions = {
     'http://localhost:5174',
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5174',
+    'https://water-supply-managementt.vercel.app'
   ],
+
   methods:          ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders:   ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   credentials:      true,
