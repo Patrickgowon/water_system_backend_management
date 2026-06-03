@@ -1,6 +1,6 @@
 const User   = require('../models/users');
 const bcrypt = require('bcryptjs');
-const Driver = require('../models/Driver');
+const Driver = require('../models/Driver');;
 
 // ─── Default Admin Settings ───────────────────────────────────────────────────
 const DEFAULT_ADMIN_SETTINGS = {
