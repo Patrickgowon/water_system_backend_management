@@ -109,7 +109,7 @@ exports.updateRequestStatus = async (req, res) => {
 
         // Email → Driver
         try {
-          const studentDoc = await User.findById(request.user).select('firstName lastName hall roomNumber');
+          const studentDoc = await User.findById(request.user).select('firstName lastName area roomNumber');
           await sendDriverAssignmentEmail({
             driverEmail:   driverDoc.email,
             driverName:    `${driverDoc.firstName} ${driverDoc.lastName}`,

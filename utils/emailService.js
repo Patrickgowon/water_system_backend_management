@@ -120,7 +120,7 @@ exports.sendOrderApprovedEmail = async ({ studentEmail, studentName, deliveryDat
 };
 
 // ─── Send Driver Assignment Email ─────────────────────────────────────────────
-exports.sendDriverAssignmentEmail = async ({ driverEmail, driverName, studentName, deliveryDate, preferredTime, quantity, hall, roomNumber, orderId }) => {
+exports.sendDriverAssignmentEmail = async ({ driverEmail, driverName, studentName, deliveryDate, preferredTime, quantity, area, roomNumber, orderId }) => {
   try {
     await transporter.sendMail({
       from:    `"PLASU HydroTrack" <${process.env.EMAIL_USER}>`,
@@ -152,7 +152,7 @@ exports.sendDriverAssignmentEmail = async ({ driverEmail, driverName, studentNam
                   <tr><td style="padding:6px 0;color:#6b7280;font-size:14px">Quantity</td><td style="padding:6px 0;font-weight:bold;color:#111827;font-size:14px">${quantity}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;font-size:14px">Delivery Date</td><td style="padding:6px 0;font-weight:bold;color:#111827;font-size:14px">${new Date(deliveryDate).toLocaleDateString('en-NG', { dateStyle: 'full' })}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;font-size:14px">Time Slot</td><td style="padding:6px 0;font-weight:bold;color:#111827;font-size:14px">${preferredTime}</td></tr>
-                  <tr><td style="padding:6px 0;color:#6b7280;font-size:14px">Delivery Location</td><td style="padding:6px 0;font-weight:bold;color:#111827;font-size:14px">${hall}, Room ${roomNumber}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;font-size:14px">Delivery Location</td><td style="padding:6px 0;font-weight:bold;color:#111827;font-size:14px">${area}, Room ${roomNumber}</td></tr>
                 </table>
               </div>
 
