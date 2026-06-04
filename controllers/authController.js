@@ -179,7 +179,7 @@ exports.register = async (req, res) => {
     const {
       firstName, lastName, email, phone,
       matricNumber, department, level,
-      hall, roomNumber, password, confirmPassword
+      area, roomNumber, password, confirmPassword
     } = req.body;
 
     if (!email || !password || !confirmPassword)
@@ -204,7 +204,7 @@ exports.register = async (req, res) => {
       email:        email.toLowerCase(),
       phone,
       matricNumber: matricNumber?.toUpperCase(),
-      department, level, hall, roomNumber,
+      department, level, area, roomNumber,
       password,
       role:         'student',
       isVerified:   false,
