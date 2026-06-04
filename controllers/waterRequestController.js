@@ -117,7 +117,7 @@ exports.updateRequestStatus = async (req, res) => {
             deliveryDate:  request.deliveryDate,
             preferredTime: request.preferredTime,
             quantity:      request.quantity,
-            hall:          studentDoc?.hall       || 'Hall',
+            area: studentDoc?.area || 'Area',
             roomNumber:    studentDoc?.roomNumber || 'N/A',
             orderId:       request._id.toString(),
           });

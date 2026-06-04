@@ -74,22 +74,26 @@ const userSchema = new mongoose.Schema(
     },
 
     // ─── Residence Information (Student Only) ───────────────────────────────
-    hall: {
-      type: String,
-      enum: {
-        values: [
-          'Daniel Hall',
-          'Joseph Hall',
-          'Mary Hall',
-          'Peter Hall',
-          'Paul Hall',
-          'Esther Hall',
-          'Ruth Hall',
-          'Samuel Hall',
-        ],
-        message: '{VALUE} is not a valid hall',
-      },
-    },
+    area: {
+  type: String,
+  enum: {
+    values: [
+      'Assurance',
+      'GMT',
+      'Peace Villa',
+      'Civilian barack',
+      'Swiss Arena',
+      'De-ballers',
+      'WhiteHouse',
+      'Grace Villa',
+      'Anfield',
+      'Stanford',
+      'Tsunami',
+      'Chikam',
+    ],
+    message: '{VALUE} is not a valid hall',
+  },
+},
     roomNumber: {
       type: String,
       uppercase: true,
