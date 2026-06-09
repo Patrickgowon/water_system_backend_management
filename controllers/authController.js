@@ -214,7 +214,7 @@ exports.register = async (req, res) => {
 
     // ✅ Send OTP email
     try {
-      await sendOTPEmail({ email: user.email, firstName: user.firstName, otp });
+      await sendOTPEmail({ email, firstName, otp });
     } catch (emailErr) {
       console.error('OTP email failed:', emailErr.message);
       // Delete user if email fails so they can retry
