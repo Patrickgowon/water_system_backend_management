@@ -215,6 +215,7 @@ exports.register = async (req, res) => {
     // ✅ Send OTP email
     try {
       const sendOTP = await sendOTPEmail({ email, firstName, otp });
+      console.log("the email is:", email, "the firstname is:", firstName, "the OTP:", otp)
       console.log("resend success log", sendOTP)
     } catch (emailErr) {
       console.error('OTP email failed:', emailErr.message);
