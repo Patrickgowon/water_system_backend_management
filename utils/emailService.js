@@ -1,19 +1,11 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.zoho.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.ZOHO_USER,
-    pass: process.env.ZOHO_PASS,
-  },
-});
 // ─── Send OTP Email ───────────────────────────────────────────────────────────
 exports.sendOTPEmail = async ({ email, firstName, otp }) => {
   try {
-    await transporter.sendMail({
-      from: `"PLASU HydroTrack" <${process.env.ZOHO_USER}>`,
+    await resend.emails.send({
+      from: 'PLASU HydroTrack <onboarding@resend.dev>',
       to: email,
       subject: '🔐 Your Email Verification Code',
       html: `
@@ -55,8 +47,8 @@ exports.sendOTPEmail = async ({ email, firstName, otp }) => {
 // ─── Send Order Approved Email to Student ────────────────────────────────────
 exports.sendOrderApprovedEmail = async ({ studentEmail, studentName, deliveryDate, preferredTime, quantity, orderId, driverName, tanker }) => {
   try {
-    await transporter.sendMail({
-      from: `"PLASU HydroTrack" <${process.env.ZOHO_USER}>`,
+    await resend.emails.send({
+      from: 'PLASU HydroTrack <onboarding@resend.dev>',
       to: studentEmail,
       subject: '✅ Your Water Request Has Been Approved',
       html: `
@@ -100,8 +92,8 @@ exports.sendOrderApprovedEmail = async ({ studentEmail, studentName, deliveryDat
 // ─── Send Driver Assignment Email ─────────────────────────────────────────────
 exports.sendDriverAssignmentEmail = async ({ driverEmail, driverName, studentName, deliveryDate, preferredTime, quantity, area, roomNumber, orderId }) => {
   try {
-    await transporter.sendMail({
-      from: `"PLASU HydroTrack" <${process.env.ZOHO_USER}>`,
+    await resend.emails.send({
+      from: 'PLASU HydroTrack <onboarding@resend.dev>',
       to: driverEmail,
       subject: '🚚 New Delivery Assignment',
       html: `
