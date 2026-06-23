@@ -133,3 +133,46 @@ exports.sendDriverAssignmentEmail = async ({ driverEmail, driverName, studentNam
     console.error('❌ Error sending driver assignment email:', err.message);
   }
 };
+
+// ─── Send Password Reset OTP Email ───────────────────────────────────────────
+exports.sendPasswordResetEmail = async ({ email, firstName, otp }) => {
+  try {
+    await resend.emails.send({
+      from: 'PLASU HydroTrack <onboarding@resend.dev>',
+      to: email,
+      subject: '🔑 Your Password Reset Code',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="margin:0;padding:0;background:#f0fdf4;font-family:Arial,sans-serif">
+          <div style="max-width:500px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1)">
+            <div style="background:linear-gradient(135deg,#16a34a,#059669);padding:32px 24px;text-align:center">
+              <h1 style="color:white;margin:0;font-size:24px">💧 PLASU HydroTrack</h1>
+              <p style="color:#bbf7d0;margin:8px 0 0">Password Reset</p>
+            </div>
+            <div style="padding:32px 24px;text-align:center">
+              <h2 style="color:#111827;margin:0 0 8px">Hi ${firstName}! 👋</h2>
+              <p style="color:#6b7280;margin:0 0 24px">Enter this code to reset your password</p>
+              <div style="background:#f0fdf4;border:2px dashed #16a34a;border-radius:16px;padding:24px;margin-bottom:24px">
+                <p style="color:#6b7280;font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.1em">Your reset code</p>
+                <p style="font-size:48px;font-weight:900;color:#16a34a;margin:0;letter-spacing:12px">${otp}</p>
+              </div>
+              <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:12px;padding:12px;margin-bottom:24px">
+                <p style="color:#92400e;margin:0;font-size:13px">⏰ This code expires in <strong>10 minutes</strong></p>
+              </div>
+              <p style="color:#9ca3af;font-size:12px">If you didn't request this, ignore this email.</p>
+            </div>
+            <div style="background:#f9fafb;padding:16px;text-align:center;border-top:1px solid #e5e7eb">
+              <p style="color:#9ca3af;font-size:12px;margin:0">PLASU HydroTrack · Plateau State University Bokkos</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    });
+    console.log(`✅ Password reset email sent to ${email}`);
+  } catch (err) {
+    console.error('❌ Password reset email error:', err.message);
+    throw err;
+  }
+};

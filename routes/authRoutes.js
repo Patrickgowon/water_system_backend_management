@@ -13,7 +13,8 @@ const {
   forgotPassword,
   resetPassword,
   verifyOTP, 
-  resendOTP
+  resendOTP,
+  verifyResetOTP, 
 } = require('../controllers/authController');
 
 const {
@@ -29,8 +30,10 @@ const { protect, authorize } = require('../middleware/auth');
 router.post('/register', register);
 router.post('/login', login);
 router.get('/verify-email/:token', verifyEmail);
-router.post('/forgot-password', forgotPassword);
-router.patch('/reset-password/:token', resetPassword);
+
+router.post('/forgot-password',  forgotPassword);
+router.post('/verify-reset-otp', verifyResetOTP);
+router.post('/reset-password',   resetPassword);
 
 router.post('/driver/verify-otp',  verifyDriverOTP);
 router.post('/driver/resend-otp',  resendDriverOTP);
