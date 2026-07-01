@@ -154,9 +154,10 @@ const driverSchema = new mongoose.Schema(
       lastPayout: Date
     },
 
-    currentLat: { type: Number, default: null },
-    currentLng: { type: Number, default: null },
-    lastSeen:   { type: Date,   default: null },
+    currentLat:      { type: Number, default: null },
+    currentLng:      { type: Number, default: null },
+    currentLocation: { type: String, default: 'Depot' },
+    lastSeen:        { type: Date },
 
     // ── Additional Driver Fields ────────────────────────────────────────────
     preferredRoutes: {

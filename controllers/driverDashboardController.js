@@ -283,18 +283,28 @@ exports.updateDriverStatus = async (req, res) => {
 exports.updateLocation = async (req, res) => {
   try {
     const { lat, lng } = req.body;
-    if (!lat || !lng) return res.status(400).json({ success: false, message: 'Latitude and longitude are required' });
+    if (!lat || !lng)
+      return res.status(400).json({ success: false, message: 'lat and lng required' });
 
     const driver = await Driver.findByIdAndUpdate(
       req.user.id,
-      { currentLocation: `${lat}, ${lng}`, lastActive: new Date() },
+      {
+        $set: {
+          currentLocation: `${lat}, ${lng}`,
+          currentLat:      parseFloat(lat),
+          currentLng:      parseFloat(lng),
+          lastActive:      new Date(),
+        }
+      },
       { new: true }
     );
 
-    if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+    if (!driver)
+      return res.status(404).json({ success: false, message: 'Driver not found' });
 
     res.status(200).json({ success: true, message: 'Location updated', data: { lat, lng } });
   } catch (err) {
+    console.error('❌ updateLocation error:', err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 };
