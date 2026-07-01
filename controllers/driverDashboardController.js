@@ -282,7 +282,7 @@ exports.updateDriverStatus = async (req, res) => {
 // ─── Update Driver Location ────────────────────────────────────────────────
 exports.updateLocation = async (req, res) => {
   try {
-    const { lat, lng } = req.body;
+    const { lat, lng } = req.body;;
     if (!lat || !lng)
       return res.status(400).json({ success: false, message: 'lat and lng required' });
 
