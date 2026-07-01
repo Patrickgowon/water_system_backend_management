@@ -533,6 +533,7 @@ exports.completeDelivery = async (req, res) => {
 
     request.status = 'completed';
     request.signature = signature;
+    request.completedAt = new Date();
     await request.save();
 
     // Update driver's total deliveries count
