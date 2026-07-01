@@ -23,23 +23,32 @@ dotenv.config();
 connectdb();
 
 const app    = express();
-const server = http.createServer(app); // ← wrap express with http server
+const server = http.createServer(app);
+
+// ─── Allowed Origins ──────────────────────────────────────────────────────────
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+  'https://water-supply-managementt.vercel.app',
+  'https://water-supply-managementt.vercel.app/',  // ✅ Added trailing slash
+  'https://water-supply-managementt.vercel.app'    // ✅ Just in cases
+];
 
 // ─── Socket.io Setup ──────────────────────────────────────────────────────────
 const io = new Server(server, {
   cors: {
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://127.0.0.1:5173',
-      'http://127.0.0.1:5174',
-      'https://water-supply-managementt.vercel.app'
-    ],
-    methods: ['GET', 'POST'],
+    origin: allowedOrigins,  // ✅ Use the same origins
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
-  }
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+  },
+  transports: ['polling', 'websocket'],  // ✅ Allow both (polling first)
+  allowEIO3: true,                        // ✅ Support older clients
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
-
 
 // Make io accessible in routes/controllers
 app.set('io', io);
@@ -56,7 +65,6 @@ io.on('connection', (socket) => {
 
   // ── Driver sends location update ─────────────────────────────────────────
   socket.on('driver:location', async (data) => {
-    // data = { driverId, lat, lng, locationName }
     const { driverId, lat, lng, locationName } = data;
 
     try {
@@ -120,21 +128,18 @@ io.on('connection', (socket) => {
 
 // ─── CORS Configuration ───────────────────────────────────────────────────────
 const corsOptions = {
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:5174',
-    'https://water-supply-managementt.vercel.app'
-  ],
-
-  methods:          ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders:   ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  credentials:      true,
+  origin: allowedOrigins,  // ✅ Use the same allowed origins
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  credentials: true,
   optionsSuccessStatus: 200,
+  preflightContinue: false,
 };
 
 app.use(cors(corsOptions));
+
+// ─── Handle OPTIONS preflight requests explicitly ────────────────────────────
+app.options('*', cors(corsOptions));
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json());
@@ -214,13 +219,13 @@ app.use((err, req, res, next) => {
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {   // ← use server.listen not app.listen
+server.listen(PORT, () => {
   console.log(`✅ Server running on PORT ${PORT}`);
   console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📡 API base: http://localhost:${PORT}/api`);
-  console.log(`🔌 Socket.io ready`);
+  console.log(`🔌 Socket.io ready (polling + websocket)`);
+  console.log(`🌐 Allowed origins:`, allowedOrigins);
   console.log('');
- 
 });
 
 // Export io for use in other files
