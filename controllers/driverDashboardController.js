@@ -284,24 +284,28 @@ exports.updateDriverStatus = async (req, res) => {
 exports.updateLocation = async (req, res) => {
   try {
     const { lat, lng } = req.body;
+    
+    console.log('📍 updateLocation called');
+    console.log('📍 req.user:', req.user);
+    console.log('📍 lat:', lat, 'lng:', lng);
+    
     if (!lat || !lng)
       return res.status(400).json({ success: false, message: 'lat and lng required' });
 
+    console.log('📍 Finding driver with ID:', req.user.id);
+
     const driver = await Driver.findByIdAndUpdate(
       req.user.id,
-      {
-        $set: {
-          currentLocation: `${lat}, ${lng}`,
-          lastActive:      new Date(),
-        }
-      },
+      { $set: { currentLocation: `${lat}, ${lng}`, lastSeen: new Date() } },
       { new: true, strict: false }
     );
+
+    console.log('📍 Driver after update:', driver ? 'found' : 'NOT FOUND');
 
     if (!driver)
       return res.status(404).json({ success: false, message: 'Driver not found' });
 
-    // ✅ Emit via socket so students receive it in real time
+    // Emit via socket
     const io = req.app.get('io');
     if (io) {
       io.to(`tracking:${req.user.id}`).emit('driver:locationUpdate', {
@@ -310,13 +314,15 @@ exports.updateLocation = async (req, res) => {
         lng:          parseFloat(lng),
         locationName: `${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}`,
         timestamp:    new Date(),
-      });;
-      console.log(`📍 Location broadcasted for driver ${req.user.id}: ${lat}, ${lng}`);
+      });
+      console.log(`✅ Location broadcasted for driver ${req.user.id}`);
     }
 
     res.status(200).json({ success: true, message: 'Location updated', data: { lat, lng } });
   } catch (err) {
-    console.error('❌ updateLocation error:', err.message);
+    console.error('❌ updateLocation FULL error:', err);
+    console.error('❌ updateLocation error name:', err.name);
+    console.error('❌ updateLocation error message:', err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 };
