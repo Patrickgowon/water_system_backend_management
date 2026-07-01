@@ -33,7 +33,7 @@ const allowedOrigins = [
   'http://127.0.0.1:5174',
   'https://water-supply-managementt.vercel.app',
   'https://water-supply-managementt.vercel.app/',  // ✅ Added trailing slash
-  'https://water-supply-managementt.vercel.app'    // ✅ Just in case
+  'https://water-supply-managementt.vercel.app'    // ✅ Just in cases
 ];
 
 // ─── Socket.io Setup ──────────────────────────────────────────────────────────
