@@ -23,25 +23,23 @@ dotenv.config();
 connectdb();
 
 const app    = express();
-const server = http.createServer(app);
-
-// ─── Allowed Origins ──────────────────────────────────────────────────────────
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://127.0.0.1:5173',
-  'http://127.0.0.1:5174',
-  'https://water-supply-managementt.vercel.app'
-];
+const server = http.createServer(app); // ← wrap express with http server
 
 // ─── Socket.io Setup ──────────────────────────────────────────────────────────
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
-    methods: ['GET', 'POST'],  // ← Keep simple like your working version
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5174',
+      'https://water-supply-managementt.vercel.app'
+    ],
+    methods: ['GET', 'POST'],
     credentials: true,
   }
 });
+
 
 // Make io accessible in routes/controllers
 app.set('io', io);
@@ -50,16 +48,21 @@ app.set('io', io);
 io.on('connection', (socket) => {
   console.log(`🔌 Socket connected: ${socket.id}`);
 
+  // ── Driver joins their own room ──────────────────────────────────────────
   socket.on('driver:join', (driverId) => {
     socket.join(`driver:${driverId}`);
     console.log(`🚚 Driver ${driverId} joined their room`);
   });
 
+  // ── Driver sends location update ─────────────────────────────────────────
   socket.on('driver:location', async (data) => {
+    // data = { driverId, lat, lng, locationName }
     const { driverId, lat, lng, locationName } = data;
 
     try {
       const Driver = require('./models/Driver');
+
+      // Save to DB
       await Driver.findByIdAndUpdate(driverId, {
         currentLocation: locationName,
         currentLat:      lat,
@@ -67,6 +70,7 @@ io.on('connection', (socket) => {
         lastSeen:        new Date(),
       });
 
+      // Broadcast to admin room
       io.to('admin:tracking').emit('driver:locationUpdate', {
         driverId,
         lat,
@@ -75,6 +79,7 @@ io.on('connection', (socket) => {
         timestamp: new Date(),
       });
 
+      // Broadcast to students tracking this driver
       io.to(`tracking:${driverId}`).emit('driver:locationUpdate', {
         driverId,
         lat,
@@ -89,21 +94,25 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── Admin joins tracking room ─────────────────────────────────────────────
   socket.on('admin:joinTracking', () => {
     socket.join('admin:tracking');
     console.log(`👮 Admin joined tracking room`);
   });
 
+  // ── Student joins tracking room for a specific driver ────────────────────
   socket.on('student:trackDriver', (driverId) => {
     socket.join(`tracking:${driverId}`);
     console.log(`🎓 Student tracking driver: ${driverId}`);
   });
 
+  // ── Stop tracking ─────────────────────────────────────────────────────────
   socket.on('student:stopTracking', (driverId) => {
     socket.leave(`tracking:${driverId}`);
     console.log(`🎓 Student stopped tracking driver: ${driverId}`);
   });
 
+  // ── Disconnect ────────────────────────────────────────────────────────────
   socket.on('disconnect', () => {
     console.log(`🔌 Socket disconnected: ${socket.id}`);
   });
@@ -111,17 +120,21 @@ io.on('connection', (socket) => {
 
 // ─── CORS Configuration ───────────────────────────────────────────────────────
 const corsOptions = {
-  origin: allowedOrigins,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  credentials: true,
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'https://water-supply-managementt.vercel.app'
+  ],
+
+  methods:          ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders:   ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  credentials:      true,
   optionsSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions));
-
-// ─── Handle OPTIONS preflight explicitly ────────────────────────────────────
-app.options('*', cors(corsOptions));
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json());
@@ -201,12 +214,13 @@ app.use((err, req, res, next) => {
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+server.listen(PORT, () => {   // ← use server.listen not app.listen
   console.log(`✅ Server running on PORT ${PORT}`);
   console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📡 API base: http://localhost:${PORT}/api`);
   console.log(`🔌 Socket.io ready`);
   console.log('');
+ 
 });
 
 // Export io for use in other files
