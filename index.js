@@ -220,20 +220,7 @@ server.listen(PORT, () => {   // ← use server.listen not app.listen
   console.log(`📡 API base: http://localhost:${PORT}/api`);
   console.log(`🔌 Socket.io ready`);
   console.log('');
-  console.log('📌 Registered routes:');
-  console.log('   POST   /api/auth/register');
-  console.log('   POST   /api/auth/login');
-  console.log('   POST   /api/auth/driver/register');
-  console.log('   POST   /api/auth/driver/login');
-  console.log('   GET    /api/drivers');
-  console.log('   GET    /api/driver/profile');
-  console.log('   GET    /api/driver/deliveries/today');
-  console.log('   GET    /api/driver/earnings');
-  console.log('   GET    /api/driver/settings');
-  console.log('   GET    /api/water-requests');
-  console.log('   GET    /api/students');
-  console.log('   GET    /api/analytics');
-  console.log('   GET    /api/health');
+ 
 });
 
 // Export io for use in other files
