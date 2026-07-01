@@ -100,6 +100,7 @@ const driverSchema = new mongoose.Schema(
     isVerified:      { type: Boolean, default: false },
     online:          { type: Boolean, default: false },
     currentLocation: { type: String,  default: '' },
+    lastSeen:        { type: Date },
     rating:          { type: Number,  default: 0, min: 0, max: 5 },
     totalDeliveries: { type: Number,  default: 0 },
     totalRatings:    { type: Number,  default: 0 },
@@ -154,10 +155,7 @@ const driverSchema = new mongoose.Schema(
       lastPayout: Date
     },
 
-    currentLat:      { type: Number, default: null },
-    currentLng:      { type: Number, default: null },
-    currentLocation: { type: String, default: 'Depot' },
-    lastSeen:        { type: Date },
+    
 
     // ── Additional Driver Fields ────────────────────────────────────────────
     preferredRoutes: {
