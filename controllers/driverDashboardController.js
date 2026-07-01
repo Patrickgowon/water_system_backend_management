@@ -310,7 +310,7 @@ exports.updateLocation = async (req, res) => {
         lng:          parseFloat(lng),
         locationName: `${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}`,
         timestamp:    new Date(),
-      });
+      });;
       console.log(`📍 Location broadcasted for driver ${req.user.id}: ${lat}, ${lng}`);
     }
 
