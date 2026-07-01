@@ -280,9 +280,10 @@ exports.updateDriverStatus = async (req, res) => {
 };
 
 // ─── Update Driver Location ────────────────────────────────────────────────
+// ─── Update Driver Location ────────────────────────────────────────────────
 exports.updateLocation = async (req, res) => {
   try {
-    const { lat, lng } = req.body;;
+    const { lat, lng } = req.body;
     if (!lat || !lng)
       return res.status(400).json({ success: false, message: 'lat and lng required' });
 
@@ -291,16 +292,27 @@ exports.updateLocation = async (req, res) => {
       {
         $set: {
           currentLocation: `${lat}, ${lng}`,
-          currentLat:      parseFloat(lat),
-          currentLng:      parseFloat(lng),
           lastActive:      new Date(),
         }
       },
-      { new: true }
+      { new: true, strict: false }
     );
 
     if (!driver)
       return res.status(404).json({ success: false, message: 'Driver not found' });
+
+    // ✅ Emit via socket so students receive it in real time
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`tracking:${req.user.id}`).emit('driver:locationUpdate', {
+        driverId:     req.user.id,
+        lat:          parseFloat(lat),
+        lng:          parseFloat(lng),
+        locationName: `${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}`,
+        timestamp:    new Date(),
+      });
+      console.log(`📍 Location broadcasted for driver ${req.user.id}: ${lat}, ${lng}`);
+    }
 
     res.status(200).json({ success: true, message: 'Location updated', data: { lat, lng } });
   } catch (err) {
