@@ -31,6 +31,7 @@ const {
 // All routes require authentication
 router.use(protect);
 
+router.put('/location', updateLocation);
 // Profile routes
 router.get('/profile', getDriverProfile);
 router.put('/profile', updateDriverProfile);
@@ -39,20 +40,7 @@ router.put('/status', updateDriverStatus);
 
 
 // In your location update route
-router.put('/location', protect, async (req, res) => {
-  try {
-    const { lat, lng, locationName } = req.body;
-    await Driver.findByIdAndUpdate(req.user._id, {
-      currentLat:      lat,
-      currentLng:      lng,
-      currentLocation: locationName || `${lat}, ${lng}`,
-      lastSeen:        new Date(),
-    });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
+
 
 // ← add these two
 router.get('/settings', getSettings);

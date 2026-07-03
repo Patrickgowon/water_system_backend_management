@@ -86,14 +86,14 @@ exports.getTodayDeliveries = async (req, res) => {
       ...buildDriverQuery(req.user.id, driver),
       status: { $in: ['pending', 'approved', 'scheduled', 'assigned', 'in-progress'] }
     })
-    .populate('user', 'firstName lastName email phone hall roomNumber')
+    .populate('user', 'firstName lastName email phone area roomNumber')
     .sort({ deliveryDate: 1 }); // ✅ sort by soonest first
 
     const formattedDeliveries = deliveries.map(d => ({
       _id:           d._id,
       id:            d._id,
-      location:      d.user?.hall    || 'Unknown Location',
-      address:       `${d.user?.hall || 'Hall'}, Room ${d.user?.roomNumber || 'N/A'}`,
+      location:      d.user?.area    || 'Unknown Location',
+      address:       `${d.user?.area || 'Area'}, Room ${d.user?.roomNumber || 'N/A'}`,
       amount:        d.quantityValue,
       status:        d.status,
       scheduledTime: d.preferredTime,
@@ -124,14 +124,14 @@ exports.getDeliveryHistory = async (req, res) => {
       ...buildDriverQuery(req.user.id, driver),
       status: 'completed'
     })
-      .populate('user', 'firstName lastName hall roomNumber')
+      .populate('user', 'firstName lastName area roomNumber')
       .sort({ createdAt: -1 })
       .limit(50);
 
     const formattedDeliveries = deliveries.map(d => ({
       _id:           d._id,
       id:            d._id,
-      location:      d.user?.hall || 'Unknown',
+      location:      d.user?.area || 'Unknown',
       amount:        d.quantityValue,
       date:          d.createdAt,
       scheduledTime: d.preferredTime,
@@ -280,24 +280,34 @@ exports.updateDriverStatus = async (req, res) => {
 };
 
 // ─── Update Driver Location ────────────────────────────────────────────────
-// ─── Update Driver Location ────────────────────────────────────────────────
 exports.updateLocation = async (req, res) => {
   try {
     const { lat, lng } = req.body;
-    
+
     console.log('📍 updateLocation called');
     console.log('📍 req.user:', req.user);
     console.log('📍 lat:', lat, 'lng:', lng);
-    
-    if (!lat || !lng)
+
+    if (lat === undefined || lng === undefined || lat === null || lng === null)
       return res.status(400).json({ success: false, message: 'lat and lng required' });
+
+    const latitude  = parseFloat(lat);
+    const longitude = parseFloat(lng);
+
+    if (Number.isNaN(latitude) || Number.isNaN(longitude))
+      return res.status(400).json({ success: false, message: 'lat and lng must be valid numbers' });
 
     console.log('📍 Finding driver with ID:', req.user.id);
 
     const driver = await Driver.findByIdAndUpdate(
       req.user.id,
-      { $set: { currentLocation: `${lat}, ${lng}`, lastSeen: new Date() } },
-      { new: true, strict: false }
+      {
+        $set: {
+          currentLocation: { lat: latitude, lng: longitude }, // ✅ matches schema shape
+          lastSeen: new Date(),
+        },
+      },
+      { new: true, runValidators: true }
     );
 
     console.log('📍 Driver after update:', driver ? 'found' : 'NOT FOUND');
@@ -310,15 +320,15 @@ exports.updateLocation = async (req, res) => {
     if (io) {
       io.to(`tracking:${req.user.id}`).emit('driver:locationUpdate', {
         driverId:     req.user.id,
-        lat:          parseFloat(lat),
-        lng:          parseFloat(lng),
-        locationName: `${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}`,
+        lat:          latitude,
+        lng:          longitude,
+        locationName: `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
         timestamp:    new Date(),
       });
       console.log(`✅ Location broadcasted for driver ${req.user.id}`);
     }
 
-    res.status(200).json({ success: true, message: 'Location updated', data: { lat, lng } });
+    res.status(200).json({ success: true, message: 'Location updated', data: { lat: latitude, lng: longitude } });
   } catch (err) {
     console.error('❌ updateLocation FULL error:', err);
     console.error('❌ updateLocation error name:', err.name);

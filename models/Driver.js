@@ -23,6 +23,21 @@ const driverSchema = new mongoose.Schema(
     dateOfBirth: { type: Date,   required: [true, 'Date of birth is required'] },
     address:     { type: String, required: [true, 'Address is required'], trim: true },
 
+    // ── Registration Location (area near PLASU Bokkos) ─────────────────────
+    location: {
+      type:     String,
+      required: [true, 'Location is required'],
+      enum:     ['Ndar', 'Across'],
+    },
+    latitude: {
+      type:     Number,
+      required: [true, 'Latitude is required'],
+    },
+    longitude: {
+      type:     Number,
+      required: [true, 'Longitude is required'],
+    },
+
     // ── Vehicle ─────────────────────────────────────────────────────────────
     tankerId: {
       type:     String,
@@ -99,7 +114,10 @@ const driverSchema = new mongoose.Schema(
     },
     isVerified:      { type: Boolean, default: false },
     online:          { type: Boolean, default: false },
-    currentLocation: { type: String,  default: '' },
+    currentLocation: { 
+      lat: {type: Number},
+      lng: {type: Number}
+     },
     lastSeen:        { type: Date },
     rating:          { type: Number,  default: 0, min: 0, max: 5 },
     totalDeliveries: { type: Number,  default: 0 },

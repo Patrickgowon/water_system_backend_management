@@ -11,7 +11,7 @@ exports.getAllRequests = async (req, res) => {
     console.log('📋 Fetching all water requests...');
     
     const requests = await WaterRequest.find()
-      .populate('user', 'firstName lastName email matricNumber department level hall roomNumber phone')
+      .populate('user', 'firstName lastName email matricNumber department level area roomNumber phone')
       .populate('driver', 'firstName lastName tankerId phone rating') // ✅ Populate driver info
       .sort({ createdAt: -1 });
 
@@ -415,19 +415,33 @@ exports.cancelRequest = async (req, res) => {
 exports.getDriverTodayDeliveries = async (req, res) => {
   try {
     const driverId = req.user.id;
-    
+
     // Get today's date range
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
+    // ✅ Fetch the driver so we can build the query (was missing before)
+    const driver = await Driver.findById(driverId);
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: 'Driver not found'
+      });
+    }
+
     const deliveries = await WaterRequest.find({
-  ...buildDriverQuery(req.user.id, driver),
-  // deliveryDate: { $gte: today, $lt: tomorrow }, // ← commented out to test
-  status: { $in: ['pending', 'approved', 'scheduled', 'assigned', 'in-progress'] }
-    }).populate('user', 'firstName lastName email phone hall roomNumber');
-        res.status(200).json({
+      $or: [
+        { driver:         driverId },
+        { assignedDriver: driverId },
+        { tanker:         driver.tankerId },
+      ],
+      // deliveryDate: { $gte: today, $lt: tomorrow }, // ← commented out to test
+      status: { $in: ['pending', 'approved', 'scheduled', 'assigned', 'in-progress'] }
+    }).populate('user', 'firstName lastName email phone area roomNumber');
+
+    res.status(200).json({
       success: true,
       data: deliveries
     });

@@ -1,11 +1,23 @@
-const { Resend } = require('resend');
-const resend = new Resend(process.env.RESEND_API_KEY);
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+const FROM = `PLASU HydroTrack <${process.env.EMAIL_USER}>`;
 
 // ─── Send OTP Email ───────────────────────────────────────────────────────────
 exports.sendOTPEmail = async ({ email, firstName, otp }) => {
   try {
-    await resend.emails.send({
-      from: 'PLASU HydroTrack <onboarding@resend.dev>',
+    await transporter.sendMail({
+      from: FROM,
       to: email,
       subject: '🔐 Your Email Verification Code',
       html: `
@@ -47,8 +59,8 @@ exports.sendOTPEmail = async ({ email, firstName, otp }) => {
 // ─── Send Order Approved Email to Student ────────────────────────────────────
 exports.sendOrderApprovedEmail = async ({ studentEmail, studentName, deliveryDate, preferredTime, quantity, orderId, driverName, tanker }) => {
   try {
-    await resend.emails.send({
-      from: 'PLASU HydroTrack <onboarding@resend.dev>',
+    await transporter.sendMail({
+      from: FROM,
       to: studentEmail,
       subject: '✅ Your Water Request Has Been Approved',
       html: `
@@ -92,8 +104,8 @@ exports.sendOrderApprovedEmail = async ({ studentEmail, studentName, deliveryDat
 // ─── Send Driver Assignment Email ─────────────────────────────────────────────
 exports.sendDriverAssignmentEmail = async ({ driverEmail, driverName, studentName, deliveryDate, preferredTime, quantity, area, roomNumber, orderId }) => {
   try {
-    await resend.emails.send({
-      from: 'PLASU HydroTrack <onboarding@resend.dev>',
+    await transporter.sendMail({
+      from: FROM,
       to: driverEmail,
       subject: '🚚 New Delivery Assignment',
       html: `
@@ -137,8 +149,8 @@ exports.sendDriverAssignmentEmail = async ({ driverEmail, driverName, studentNam
 // ─── Send Password Reset OTP Email ───────────────────────────────────────────
 exports.sendPasswordResetEmail = async ({ email, firstName, otp }) => {
   try {
-    await resend.emails.send({
-      from: 'PLASU HydroTrack <onboarding@resend.dev>',
+    await transporter.sendMail({
+      from: FROM,
       to: email,
       subject: '🔑 Your Password Reset Code',
       html: `

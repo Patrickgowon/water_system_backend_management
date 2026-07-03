@@ -52,6 +52,7 @@ exports.registerDriver = async (req, res) => {
   try {
     const {
       firstName, lastName, email, phone, dateOfBirth, address,
+      location, latitude, longitude,
       tankerId, vehicleType, vehiclePlate, vehicleCapacity, vehicleYear,
       licenseNumber, licenseExpiry, yearsExperience,
       emergencyContact, emergencyPhone,
@@ -61,6 +62,7 @@ exports.registerDriver = async (req, res) => {
     // ── 1. Basic presence check ─────────────────────────────
     const required = {
       firstName, lastName, email, phone, dateOfBirth, address,
+      location, latitude, longitude,
       tankerId, vehicleType, vehiclePlate, vehicleCapacity, vehicleYear,
       licenseNumber, licenseExpiry, yearsExperience,
       emergencyContact, emergencyPhone, password, confirmPassword,
@@ -95,7 +97,27 @@ exports.registerDriver = async (req, res) => {
       });
     }
 
-    // ── 3. Duplicate checks ─────────────────────────────────
+    // ── 3. Location validation ──────────────────────────────
+    const validLocations = ['Ndar', 'Across'];
+    if (!validLocations.includes(location)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid location selected',
+        errors:  [`Location must be one of: ${validLocations.join(', ')}`],
+      });
+    }
+
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid coordinates for the selected location',
+        errors:  ['Latitude and longitude must be valid numbers'],
+      });
+    }
+
+    // ── 4. Duplicate checks ─────────────────────────────────
     const [emailExists, tankerExists, licenseExists] = await Promise.all([
       Driver.findOne({ email:         email.toLowerCase() }),
       Driver.findOne({ tankerId:      tankerId.toUpperCase() }),
@@ -124,7 +146,7 @@ exports.registerDriver = async (req, res) => {
       });
     }
 
-    // ── 4. License expiry must be in the future ─────────────
+    // ── 5. License expiry must be in the future ─────────────
     if (new Date(licenseExpiry) <= new Date()) {
       return res.status(400).json({
         success: false,
@@ -133,11 +155,11 @@ exports.registerDriver = async (req, res) => {
       });
     }
 
-    // ── 5. Generate OTP ─────────────────────────────────────
+    // ── 6. Generate OTP ─────────────────────────────────────
     const otp       = generateOTP();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // ── 6. Create driver ────────────────────────────────────
+    // ── 7. Create driver ────────────────────────────────────
     const driver = await Driver.create({
       firstName:        firstName.trim(),
       lastName:         lastName.trim(),
@@ -145,6 +167,9 @@ exports.registerDriver = async (req, res) => {
       phone,
       dateOfBirth:      new Date(dateOfBirth),
       address:          address.trim(),
+      location,
+      latitude:         lat,
+      longitude:        lng,
       tankerId:         tankerId.toUpperCase().trim(),
       vehicleType,
       vehiclePlate:     vehiclePlate.toUpperCase().trim(),
@@ -162,7 +187,7 @@ exports.registerDriver = async (req, res) => {
       verificationTokenExpiry: otpExpiry,
     });
 
-    // ── 7. Send OTP email ────────────────────────────────────
+    // ── 8. Send OTP email ────────────────────────────────────
     try {
       await sendOTPEmail({ email: driver.email, firstName: driver.firstName, otp });
     } catch (emailErr) {
